@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>User page</title>
+  <style>
+      body {
+          font-family: 'Inter', sans-serif;
+      }
+  </style>
+</head>
+<body class="bg-gray-50">
+<div class="flex flex-col m-auto py-8" style="width: 80%;">
+  <div class="flex justify-between">
+    <h1 class="text-4xl font-bold text-gray-800 mb-6">Панель Пользователя</h1>
+    <div class="float-right mt-2 ms-2">
+      <img src="https://i.pinimg.com/736x/07/01/1e/07011eccd1f3c45d149441de527aa693.jpg" height="80" width="80" alt="Лого" style="border: #888888 1px solid; border-radius: 3px;">
+      <p>Котенок</p>
+    </div>
+  </div>
+
+  <div id="result" class="space-y-6"></div>
+</div>
+<div class="flex flex-col py-8 m-auto" style="width: 80%;">
+  <div class="flex flex-col gap-2 mt-4" style="width: 30%">
+    <input id = "messageArea" type="text" size="30" class="border block">
+    <input type="submit" value="Отправить" onclick=sendMessage() class="border block" style="height: 50px"><br>
+    <div id="textArea"></div>
+  </div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script>
+    query = `{
+      categories {
+        id, name, products {
+          id, name, price,
+        }
+      }
+    }`;
+    $.ajax({
+        url: '/graphql',
+        method: 'post',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+        },
+        data: JSON.stringify({
+            query: query,
+            variables: null,
+        }),
+        success: (data) => {
+            data = data.data.categories;
+            let productsRowsHTML = '';
+            for (const category of data) {
+                productsRowsHTML += `<h2 class="text-2xl font-semibold text-gray-700 pb-4">${category.name}</h2>`;
+                productsRowsHTML += '<div class="flex gap-6 flex-wrap">';
+                for (const product of category.products) {
+                    productsRowsHTML += `
+                    <div class="flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm p-4" style="width: 30%;">
+                        <p class="text-gray-700 font-medium">Название: <span class="font-normal">${product.name}</span></p>
+                        <p class="text-gray-700 font-medium">Цена: <span class="font-normal">${product.price} руб.</span></p>
+                    </div>`;
+                }
+                productsRowsHTML += '</div>'
+            }
+
+            $('#result').wrapInner(productsRowsHTML);
+        }
+    });
+</script>
+<script>
+    const connection = new WebSocket("ws://localhost:9000");
+
+    // если соединение успешно установлено
+    connection.onopen = (event) => {
+        console.log("Connection opened");
+    };
+
+    // если возникла ошибка
+    connection.onerror = (error) => {
+        console.log(`WebSocket Error: ${error}`);
+    };
+
+    // если соединение закрыто
+    connection.onclose = (event) => {
+        console.log("Connection closed");
+    };
+
+    // получаем ответ сервера
+    connection.onmessage = (event) => {
+        console.log(event.data)
+        const eventJson = JSON.parse(event.data);
+        message = document.createElement('p');
+        message.textContent = `${eventJson.sender === 'user' ? 'Вы' : 'Администратор'}: ${eventJson.content}`;
+        document.getElementById('textArea').append(message);
+        console.log("Server response:", event.data);
+    };
+
+    function sendMessage() {
+        text = document.getElementById('messageArea').value;
+        if (text === "") {
+            alert("Пожалуйста, введите непустую строку")
+        } else {
+            connection.send(JSON.stringify({sender: "user", content: text}));
+            document.getElementById('messageArea').value = '';
+        }
+    }
+</script>
+</body>
+</html>
