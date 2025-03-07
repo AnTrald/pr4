@@ -21,7 +21,10 @@
       <p>Котенок</p>
     </div>
   </div>
-
+  <div class="py-2 text-xl">
+    <input type="checkbox" id="description" name="description" onchange="showDescription()">
+    <label for="description">Отображать описание</label>
+  </div>
   <div id="result" class="space-y-6"></div>
 </div>
 <div class="flex flex-col py-8 m-auto" style="width: 80%;">
@@ -33,43 +36,57 @@
 </div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <script>
-    query = `{
-      categories {
-        id, name, products {
-          id, name, price,
-        }
-      }
-    }`;
-    $.ajax({
-        url: '/graphql',
-        method: 'post',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        },
-        data: JSON.stringify({
-            query: query,
-            variables: null,
-        }),
-        success: (data) => {
-            data = data.data.categories;
-            let productsRowsHTML = '';
-            for (const category of data) {
-                productsRowsHTML += `<h2 class="text-2xl font-semibold text-gray-700 pb-4">${category.name}</h2>`;
-                productsRowsHTML += '<div class="flex gap-6 flex-wrap">';
-                for (const product of category.products) {
-                    productsRowsHTML += `
+    function showDescription(){
+    $('#result').html('');
+        query = `{
+          categories {
+            id, name, products {
+              id, name, price, description
+            }
+          }
+        }`;
+        $.ajax({
+            url: '/graphql',
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            data: JSON.stringify({
+                query: query,
+                variables: null,
+            }),
+            success: (data) => {
+                data = data.data.categories;
+                let productsRowsHTML = '';
+                for (const category of data) {
+                    productsRowsHTML += `<h2 class="text-2xl font-semibold text-gray-700 pb-4">${category.name}</h2>`;
+                    productsRowsHTML += '<div class="flex gap-6 flex-wrap">';
+                    for (const product of category.products) {
+                        if (document.getElementById("description").checked) {
+                            productsRowsHTML += `
+                    <div class="flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm p-4" style="width: 30%;">
+                        <p class="text-gray-700 font-medium">Название: <span class="font-normal">${product.name}</span></p>
+                        <p class="text-gray-700 font-medium">Цена: <span class="font-normal">${product.price} руб.</span></p>
+                        <p class="text-gray-700 font-medium">Описание: <span class="font-normal">${product.description}</span></p>
+                    </div>`;
+                        }
+                        else {
+                            productsRowsHTML += `
                     <div class="flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm p-4" style="width: 30%;">
                         <p class="text-gray-700 font-medium">Название: <span class="font-normal">${product.name}</span></p>
                         <p class="text-gray-700 font-medium">Цена: <span class="font-normal">${product.price} руб.</span></p>
                     </div>`;
+                        }
+                    }
+                    productsRowsHTML += '</div>'
                 }
-                productsRowsHTML += '</div>'
-            }
 
-            $('#result').wrapInner(productsRowsHTML);
-        }
-    });
+                $('#result').wrapInner(productsRowsHTML);
+            }
+        });
+    }
+    showDescription()
 </script>
 <script>
     const connection = new WebSocket("ws://localhost:9000");
